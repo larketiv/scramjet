@@ -210,7 +210,7 @@
 <div class="clock-widget">
   <div class="clock-time" id="clockTime"></div>
   <div class="clock-day" id="clockDay"></div>
-  <div style="font-size:0.65rem;color:var(--muted);opacity:0.6;margin-top:4px;">v70</div>
+  <div style="font-size:0.65rem;color:var(--muted);opacity:0.6;margin-top:4px;">v72</div>
 </div>
 
 <div class="dots" id="dots"></div>
@@ -247,7 +247,7 @@
       <div class="spinner"></div>
       <div class="loading-text">Loading through proxy…</div>
     </div>
-    <iframe id="proxy-frame"></iframe>
+
   </div>
 </div>
 
@@ -295,26 +295,7 @@
 </div>
 
 <script>
-  let swReady = false;
-  // Load UV bundle first, then register SW
-  const uvBundle = document.createElement('script');
-  uvBundle.src = '/uv/uv.bundle.js';
-  uvBundle.onload = () => {
-    const uvConfig = document.createElement('script');
-    uvConfig.src = '/uv/uv.config.js';
-    uvConfig.onload = () => {
-      navigator.serviceWorker.register('/sw.js', { scope: '/uv/service/' })
-        .then(reg => {
-          const sw = reg.installing || reg.waiting || reg.active;
-          if (reg.active) { swReady = true; return; }
-          sw.addEventListener('statechange', () => {
-            if (sw.state === 'activated') swReady = true;
-          });
-        }).catch(console.error);
-    };
-    document.head.appendChild(uvConfig);
-  };
-  document.head.appendChild(uvBundle);
+
 
   // Clock
   function updateClock() {
@@ -450,14 +431,25 @@
     requestAnimationFrame(physics);
   }
 
-  // Proxy
+  // Scramjet
+  const scramjet = new ScramjetController({
+    files: {
+      wasm: "/scram/scramjet.wasm.wasm",
+      all: "/scram/scramjet.all.js",
+      sync: "/scram/scramjet.sync.js",
+    },
+  });
+  scramjet.init();
+  const connection = new BareMux.BareMuxConnection("/baremux/worker.js");
+  let sjFrame = null;
+
   const engines = {
     google:  q => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
     bing:    q => `https://www.bing.com/search?q=${encodeURIComponent(q)}`,
     ddg:     q => `https://duckduckgo.com/?q=${encodeURIComponent(q)}`,
     youtube: q => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`
   };
-  const PROXY = url => `/uv/service/${__uv$config.encodeUrl(url)}`;
+
 
   function doSearch() {
     const q = document.getElementById('searchInput').value.trim();
